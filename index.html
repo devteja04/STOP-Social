@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>POTS (Polity - One Tent Stop)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #1a237e, #3949ab, #1e88e5);
+            color: #ffffff;
+            overflow-x: hidden;
+        }
+        .main-container {
+            backdrop-filter: blur(10px) saturate(150%);
+            -webkit-backdrop-filter: blur(10px) saturate(150%);
+            background-color: rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+        }
+        .question-hint:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px 0 rgba(0, 0, 0, 0.2);
+        }
+        .fade-in {
+            animation: fadeIn 0.5s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .loader {
+            border: 4px solid rgba(255, 255, 255, 0.2);
+            border-left-color: #3498db;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            animation: spin 1s linear infinite;
+        }
+         .button-loader {
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.5);
+            border-top-color: #fff;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .dropdown-option:hover {
+            background-color: rgba(255, 255, 255, 0.2);
+        }
+        #thinker-select-button[aria-expanded="true"] #dropdown-arrow {
+            transform: rotate(180deg);
+        }
+    </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
+
+    <div class="main-container w-full max-w-4xl p-6 md:p-8 space-y-8">
+        <!-- Header -->
+        <header class="text-center">
+            <h1 class="text-4xl md:text-5xl font-extrabold tracking-tight bg-clip-text text-transparent bg-gradient-to-r from-yellow-300 via-orange-400 to-red-500">
+                POTS
+            </h1>
+            <p class="text-lg text-indigo-200 mt-2">Polity - One Tent Stop</p>
+        </header>
+
+        <main class="space-y-6">
+            <!-- Thinker Selection -->
+            <div>
+                <label for="thinker-select-button" class="block text-sm font-medium text-indigo-100 mb-2">Choose a Thinker</label>
+                <div class="relative" id="custom-dropdown-container">
+                    <button type="button" id="thinker-select-button" aria-haspopup="listbox" aria-expanded="false" class="relative w-full px-4 py-3 text-left text-white bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-white flex justify-between items-center">
+                        <span id="selected-thinker-text"></span>
+                        <svg class="w-5 h-5 text-gray-300 transition-transform duration-300" id="dropdown-arrow" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor">
+                            <path fill-rule="evenodd" d="M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z" clip-rule="evenodd" />
+                        </svg>
+                    </button>
+                    <div id="thinker-options" class="hidden absolute z-10 mt-1 w-full bg-indigo-800 bg-opacity-90 backdrop-blur-sm border border-white/20 rounded-md shadow-lg max-h-60 overflow-auto fade-in" style="animation-duration: 0.2s;">
+                        <!-- Options populated by JS -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Custom Thinker Input -->
+             <div class="pt-4 border-t border-white/10">
+                 <label for="custom-thinker-input" class="block text-sm font-medium text-indigo-100 mb-2">Or, enter a name not on the list:</label>
+                <form id="custom-thinker-form" class="flex flex-col sm:flex-row items-center gap-3">
+                    <input type="text" id="custom-thinker-input" class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-white placeholder-gray-400" placeholder="e.g., Simone de Beauvoir">
+                    <button type="submit" id="custom-thinker-submit" class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-green-500 to-teal-600 hover:from-green-600 hover:to-teal-700 text-white font-semibold rounded-lg shadow-md transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-teal-500">
+                        <span id="custom-thinker-button-text">Generate</span>
+                        <div id="custom-thinker-loader" class="loader button-loader hidden"></div>
+                    </button>
+                </form>
+                <p id="thinker-error-message" class="text-red-400 text-sm mt-2 hidden">The name you've entered was not recognized. Please try another.</p>
+            </div>
+
+
+            <!-- Questions Area -->
+            <div>
+                <h2 id="questions-title" class="text-xl font-bold text-white mb-4">Questions for...</h2>
+                <div id="questions-grid" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Questions will be populated by JS -->
+                </div>
+            </div>
+
+            <!-- Custom Question Input -->
+            <div class="pt-4 border-t border-white/20">
+                 <label for="custom-question-input" class="block text-sm font-medium text-indigo-100 mb-2">Or ask your own question:</label>
+                <form id="custom-question-form" class="flex flex-col sm:flex-row items-center gap-3">
+                    <input type="text" id="custom-question-input" class="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-lg focus:outline-none focus:ring-2 focus:ring-white placeholder-gray-400" placeholder="e.g., What is your concept of justice?">
+                    <button type="submit" class="w-full sm:w-auto flex items-center justify-center gap-2 px-6 py-3 bg-gradient-to-r from-blue-500 to-purple-600 hover:from-blue-600 hover:to-purple-700 text-white font-semibold rounded-lg shadow-md transition-transform transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m22 2-7 20-4-9-9-4Z"/><path d="m22 2-11 11"/></svg>
+                        Ask
+                    </button>
+                </form>
+            </div>
+
+            <!-- Answer Section -->
+            <div id="answer-section" class="pt-4 border-t border-white/20 hidden">
+                <h3 class="text-xl font-bold text-white mb-4">Their Answer:</h3>
+                <div id="answer-container" class="p-5 bg-black/20 rounded-lg min-h-[100px] whitespace-pre-wrap">
+                    <!-- Answer will be populated here -->
+                </div>
+            </div>
+        </main>
+        
+        <!-- Footer -->
+        <footer class="text-center text-sm text-indigo-300 pt-6">
+            <p>Engage with the greatest minds in history.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const thinkersData = {
+                "Plato": [
+                    "What is the Theory of Forms?",
+                    "Describe your ideal state as outlined in 'The Republic'.",
+                    "What is the Allegory of the Cave and its meaning?",
+                    "What are the three parts of the soul?",
+                    "Why should philosophers be kings?",
+                    "What is your view on democracy?",
+                    "How does education shape a just society?",
+                    "Explain the concept of the 'Form of the Good'.",
+                    "What is the role of art and poetry in your ideal society?",
+                    "How do you define justice for the individual and the state?"
+                ],
+                "Aristotle": [
+                    "What is the concept of the 'Golden Mean'?",
+                    "Explain your classification of governments.",
+                    "What is the purpose of the state (polis)?",
+                    "What is the difference between potentiality and actuality?",
+                    "Describe your Four Causes.",
+                    "What is 'Eudaimonia' and how is it achieved?",
+                    "Why is man a 'political animal'?",
+                    "What are the essential components of a tragedy?",
+                    "How do you differentiate between practical and theoretical wisdom?",
+                    "What is your view on slavery and citizenship?"
+                ],
+                "Niccolò Machiavelli": [
+                    "Is it better to be feared or loved?",
+                    "What is the main advice you give to a prince in 'The Prince'?",
+                    "Explain the concept of 'virtù' and 'fortuna'.",
+                    "Should a ruler prioritize morality over power?",
+                    "What is the role of deception and violence in politics?",
+                    "How do you view human nature?",
+                    "What are the differences between a principality and a republic?",
+                    "Why is the appearance of virtue important for a ruler?",
+                    "What is the role of a military in maintaining a state?",
+                    "How did you separate politics from traditional ethics?"
+                ],
+                "Thomas Hobbes": [
+                    "What is the 'state of nature' like?",
+                    "Why do people enter into a 'social contract'?",
+                    "What is the 'Leviathan' and what is its role?",
+                    "What are the fundamental laws of nature?",
+                    "Can subjects rebel against the sovereign?",
+                    "What is your view on human nature?",
+                    "What is the only right an individual retains after the social contract?",
+                    "Why is absolute sovereignty necessary?",
+                    "What is freedom or 'liberty' in your philosophy?",
+                    "How does fear motivate political action?"
+                ],
+                "John Locke": [
+                    "What are natural rights?",
+                    "What is the purpose of government?",
+                    "Describe the 'state of nature' in your view.",
+                    "Under what conditions is revolution justified?",
+                    "What is the concept of 'tabula rasa' (blank slate)?",
+                    "How is private property justified?",
+                    "Explain the importance of the separation of powers.",
+                    "What is the basis of legitimate government?",
+                    "What are the limits of political power?",
+                    "How does your social contract differ from Hobbes's?"
+                ],
+                "Jean-Jacques Rousseau": [
+                    "What is the 'general will'?",
+                    "How has civilization corrupted humanity?",
+                    "What is the 'noble savage'?",
+                    "Explain your theory of the social contract.",
+                    "What is the difference between the 'will of all' and the 'general will'?",
+                    "How can man be 'forced to be free'?",
+                    "What is the role of education as described in 'Emile'?",
+                    "What are the origins of inequality?",
+                    "What form of government do you advocate for?",
+                    "Why is popular sovereignty indivisible and inalienable?"
+                ],
+                "Karl Marx": [
+                    "What is 'historical materialism'?",
+                    "Explain the concept of 'class struggle'.",
+                    "What is 'alienation' under capitalism?",
+                    "Describe the 'dictatorship of the proletariat'.",
+                    "What is 'surplus value'?",
+                    "Why is capitalism inherently unstable?",
+                    "What will a communist society look like?",
+                    "What is 'false consciousness'?",
+                    "What is the role of the state in a capitalist society?",
+                    "How does the base-superstructure model work?"
+                ],
+                 "B. R. Ambedkar": [
+                    "Why did you advocate for the annihilation of caste?",
+                    "What is the significance of the Poona Pact?",
+                    "Explain your idea of 'Social Democracy'.",
+                    "What were your main contributions to the Indian Constitution?",
+                    "Why did you convert to Buddhism?",
+                    "What are your views on the Hindu caste system?",
+                    "How can social reform be achieved?",
+                    "What is the role of law in ensuring justice for the oppressed?",
+                    "Explain your concept of 'Constitutional Morality'.",
+                    "What is the importance of separate electorates for depressed classes?"
+                ],
+                "Mahatma Gandhi": [
+                    "Explain the concept of 'Satyagraha'.",
+                    "What is 'Ahimsa' or non-violence?",
+                    "What do you mean by 'Swaraj'?",
+                    "Describe the idea of 'Sarvodaya'.",
+                    "What is your theory of trusteeship?",
+                    "Why did you emphasize 'Swadeshi'?",
+                    "What is the role of religion in politics for you?",
+                    "How do you view the relationship between ends and means?",
+                    "What was your critique of modern Western civilization?",
+                    "What were your ideas on village autonomy and 'Gram Swaraj'?"
+                ]
+            };
+            
+            // DOM Elements
+            const dropdownContainer = document.getElementById('custom-dropdown-container');
+            const thinkerSelectButton = document.getElementById('thinker-select-button');
+            const selectedThinkerText = document.getElementById('selected-thinker-text');
+            const thinkerOptions = document.getElementById('thinker-options');
+            const questionsGrid = document.getElementById('questions-grid');
+            const questionsTitle = document.getElementById('questions-title');
+            const customQuestionForm = document.getElementById('custom-question-form');
+            const customQuestionInput = document.getElementById('custom-question-input');
+            const answerSection = document.getElementById('answer-section');
+            const answerContainer = document.getElementById('answer-container');
+            const customThinkerForm = document.getElementById('custom-thinker-form');
+            const customThinkerInput = document.getElementById('custom-thinker-input');
+            const thinkerErrorMessage = document.getElementById('thinker-error-message');
+            const customThinkerSubmit = document.getElementById('custom-thinker-submit');
+            const customThinkerButtonText = document.getElementById('custom-thinker-button-text');
+            const customThinkerLoader = document.getElementById('custom-thinker-loader');
+
+            function populateDropdown() {
+                thinkerOptions.innerHTML = '';
+                Object.keys(thinkersData).forEach(thinker => {
+                    const option = document.createElement('div');
+                    option.textContent = thinker;
+                    option.dataset.value = thinker;
+                    option.className = 'px-4 py-3 text-white cursor-pointer dropdown-option transition-colors duration-200';
+                    option.setAttribute('role', 'option');
+                    option.setAttribute('tabindex', '0');
+                    option.addEventListener('click', () => handleThinkerSelection(thinker));
+                    option.addEventListener('keydown', (e) => {
+                        if (e.key === 'Enter') handleThinkerSelection(thinker);
+                    });
+                    thinkerOptions.appendChild(option);
+                });
+            }
+            
+            function handleThinkerSelection(thinker) {
+                selectedThinkerText.textContent = thinker;
+                thinkerSelectButton.dataset.value = thinker;
+                thinkerOptions.classList.add('hidden');
+                thinkerSelectButton.setAttribute('aria-expanded', 'false');
+                displayQuestions(thinker);
+                answerSection.classList.add('hidden');
+                customQuestionInput.value = '';
+                thinkerErrorMessage.classList.add('hidden');
+            }
+
+            function displayQuestions(thinker) {
+                questionsTitle.textContent = `Questions for ${thinker}`;
+                questionsGrid.innerHTML = '';
+                const questions = thinkersData[thinker];
+                questions.forEach(q => {
+                    const questionEl = document.createElement('div');
+                    questionEl.className = 'question-hint p-4 bg-white/10 rounded-lg cursor-pointer transition-all duration-300 ease-in-out fade-in';
+                    questionEl.textContent = q;
+                    questionEl.addEventListener('click', () => handleQuestionClick(q, thinker));
+                    questionsGrid.appendChild(questionEl);
+                });
+            }
+            
+            function setGenerateButtonLoading(isLoading) {
+                if (isLoading) {
+                    customThinkerSubmit.disabled = true;
+                    customThinkerButtonText.classList.add('hidden');
+                    customThinkerLoader.classList.remove('hidden');
+                } else {
+                    customThinkerSubmit.disabled = false;
+                    customThinkerButtonText.classList.remove('hidden');
+                    customThinkerLoader.classList.add('hidden');
+                }
+            }
+            
+            customThinkerForm.addEventListener('submit', async (e) => {
+                e.preventDefault();
+                const thinkerName = customThinkerInput.value.trim();
+                if (!thinkerName) return;
+
+                if (thinkersData[thinkerName]) {
+                    handleThinkerSelection(thinkerName);
+                    customThinkerInput.value = '';
+                    return;
+                }
+                
+                setGenerateButtonLoading(true);
+                thinkerErrorMessage.classList.add('hidden');
+                await generateQuestionsForThinker(thinkerName);
+                setGenerateButtonLoading(false);
+            });
+
+            async function generateQuestionsForThinker(thinkerName) {
+                const systemPrompt = `You are an expert in political and social theory. Generate a JSON array of 10 insightful, open-ended questions about the core philosophies of the provided thinker. If the name is not a recognized philosopher, political scientist, sociologist, or historian, return a JSON array containing a single string: "ERROR_NOT_RECOGNIZED".`;
+                const userQuery = thinkerName;
+                
+                const apiKey = ""; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: {
+                        responseMimeType: "application/json",
+                    }
+                };
+
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                    
+                    const result = await response.json();
+                    const candidate = result.candidates?.[0];
+                    const textResponse = candidate?.content?.parts?.[0]?.text;
+
+                    if (!textResponse) throw new Error("Invalid response structure from API.");
+
+                    const questions = JSON.parse(textResponse);
+
+                    if (Array.isArray(questions) && questions[0] === "ERROR_NOT_RECOGNIZED") {
+                        thinkerErrorMessage.classList.remove('hidden');
+                    } else if (Array.isArray(questions) && questions.length > 0) {
+                        thinkersData[thinkerName] = questions;
+                        populateDropdown();
+                        handleThinkerSelection(thinkerName);
+                        customThinkerInput.value = '';
+                    } else {
+                         thinkerErrorMessage.classList.remove('hidden');
+                    }
+                } catch (error) {
+                    console.error("Failed to generate questions:", error);
+                    thinkerErrorMessage.textContent = "An error occurred while fetching data. Please try again.";
+                    thinkerErrorMessage.classList.remove('hidden');
+                }
+            }
+
+            function handleQuestionClick(question, thinker) {
+                customQuestionInput.value = question;
+                getAnswerFromGemini(question, thinker);
+            }
+            
+            customQuestionForm.addEventListener('submit', (e) => {
+                e.preventDefault();
+                const question = customQuestionInput.value.trim();
+                const thinker = thinkerSelectButton.dataset.value;
+                if (question && thinker) getAnswerFromGemini(question, thinker);
+            });
+            
+            thinkerSelectButton.addEventListener('click', () => {
+                const isExpanded = thinkerSelectButton.getAttribute('aria-expanded') === 'true';
+                thinkerOptions.classList.toggle('hidden');
+                thinkerSelectButton.setAttribute('aria-expanded', !isExpanded);
+            });
+
+            window.addEventListener('click', (e) => {
+                if (!dropdownContainer.contains(e.target)) {
+                    thinkerOptions.classList.add('hidden');
+                    thinkerSelectButton.setAttribute('aria-expanded', 'false');
+                }
+            });
+
+            async function getAnswerFromGemini(question, thinker) {
+                answerSection.classList.remove('hidden');
+                answerContainer.innerHTML = '<div class="flex justify-center items-center"><div class="loader"></div></div>';
+
+                const systemPrompt = `You are ${thinker}. Respond to the following question from your own philosophical perspective, using your key concepts and writing style. Answer as if you are ${thinker} himself. Keep the response concise, insightful, and under 200 words.`;
+                const userQuery = question;
+                
+                const apiKey = "AIzaSyAOfCXvTfgivs1-9d2L0hcxd1Zqb5gnyHM";
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-05-20:generateContent?key=${apiKey}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                };
+                
+                let attempts = 0;
+                const maxAttempts = 5;
+                while (attempts < maxAttempts) {
+                    try {
+                        const response = await fetch(apiUrl, {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+                        const result = await response.json();
+                        const candidate = result.candidates?.[0];
+
+                        if (candidate && candidate.content?.parts?.[0]?.text) {
+                            answerContainer.textContent = candidate.content.parts[0].text;
+                        } else {
+                           answerContainer.textContent = "Sorry, I couldn't generate a response. The thinker might be contemplating.";
+                        }
+                        return;
+                    } catch (error) {
+                        attempts++;
+                        console.error(`Attempt ${attempts} failed:`, error);
+                        if (attempts >= maxAttempts) {
+                             answerContainer.textContent = "There was an error after multiple attempts. Please try again later.";
+                             break;
+                        }
+                        const delay = Math.pow(2, attempts) * 1000 + Math.random() * 1000;
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                    }
+                }
+            }
+
+            // Initial setup
+            const initialThinker = Object.keys(thinkersData)[0];
+            populateDropdown();
+            handleThinkerSelection(initialThinker);
+        });
+    </script>
+</body>
+</html>
+
